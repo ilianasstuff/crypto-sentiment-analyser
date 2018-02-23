@@ -1,29 +1,39 @@
 
-import sys, os
-name(os.path.realpath(__file__))
-sys.path.append(parent + '/../../mitielib')
+import sys, os, csv
+
+parent = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(parent + '/../MITIE/mitielib')
 
 from mitie import *
 
-fe_filename= "../../MITIE-models/english/total_word_feature_extractor.dat"
+fe_filename= "../MITIE/MITIE-models/english/total_word_feature_extractor.dat"
 trainer = text_categorizer_trainer(fe_filename)
 
-# Don't forget to add the training data.  Here we have only two examples, but for real
-# uses you need to have thousands. You could also pass whole sentences in to the tokenize() function
-# to get the tokens.
-trainer.add_labeled_text(["I","am","so","happy","and","exciting","to","make","this"],"positive")
-trainer.add_labeled_text(["What","a","black","and","bad","day"],"negative")
+if len(sys.argv) < 2:
+	print "No training file specified. Exiting.."
+	sys.exit()
+else:
+	rawDataPath = sys.argv[1]
+	print "Opening " + rawDataPath + " ..."
+	if os.path.isfile(rawDataPath) == False:
+		print "Path specified is not valid. Exiting.."
+		sys.exit()
+	else:
+		with open(rawDataPath, 'rb') as csvfile:
+			csvReader = csv.reader(csvfile)
+			for row in csvReader:
+				tokens = tokenize(row[0])
+				trainer.add_labeled_text(tokens, row[1])
 
-# The trainer can take advantage of a multi-core CPU.  So set the number of threads
-# equal to the number of processing cores for maximum training speed.
+
+
 trainer.num_threads = 4
 
-
-# This function does the work of training.  Note that it can take a long time to run
-# when using larger training datasets.  So be patient.
 cat = trainer.train()
 
-# Now that training is done we can save the categorizer object to disk like so. 
-# In pure_model mode we do not include a copy of the feature extractor.
-cat.save_to_disk("new_text_categorizer_pure_model.dat",pure_model=True)
-
+#get filename
+saveName = os.path.basename(rawDataPath)
+#remove extension
+saveName = saveName.split(".")[0]
+#save
+cat.save_to_disk("../classifiers/" + saveName + ".dat",pure_model=True)
